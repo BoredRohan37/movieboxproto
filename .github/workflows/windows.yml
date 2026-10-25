@@ -1,0 +1,151 @@
+name: Windows Builds
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    name: ${{ matrix.job-name }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Modern Windows 10 / 11 (MSVC)
+          - job-name: win10-11-x64
+            target: x86_64-pc-windows-msvc
+            channel: stable
+            legacy: false
+          # Windows 7 SP1 / 8.1 64-bit (GNU toolchain — runs without the
+          # Universal CRT that MSVC binaries require on Win7)
+          - job-name: win7-8.1-x64
+            target: x86_64-pc-windows-gnu
+            channel: stable
+            legacy: true
+          # Windows 7 SP1 / 8.1 32-bit (for machines limited to 32-bit OS)
+          - job-name: win7-8.1-x86
+            target: i686-pc-windows-gnu
+            channel: stable
+            legacy: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (${{ matrix.target }})
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build (release)
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Smoke test binaries
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        run: |
+          target/${{ matrix.target }}/release/moviebox-tui.exe --version
+          target/${{ matrix.target }}/release/moviebox-server.exe --help
+
+      - name: Stage modern package (Win10/11)
+        if: matrix.legacy == false
+        shell: pwsh
+        run: |
+          $stage = "stage/MovieBox_Win10-11_x64"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item target/x86_64-pc-windows-msvc/release/moviebox-tui.exe $stage/
+          Copy-Item target/x86_64-pc-windows-msvc/release/moviebox-server.exe $stage/
+          Copy-Item README.md $stage/
+          Copy-Item LICENSE-MIT, LICENSE-APACHE $stage/
+          # Launcher that starts the GUI server and opens the browser
+          @'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          start "" http://127.0.0.1:7676/
+          moviebox-server.exe --port 7676
+          if errorlevel 1 pause
+          endlocal
+          '@ | Out-File -Encoding ascii "$stage\Start MovieBox GUI.bat"
+          @'
+          MovieBox — Windows 10 / 11 edition
+          ===================================
+          DOUBLE-CLICK "Start MovieBox GUI.bat" for the OTT web app
+          (opens in your default browser at http://127.0.0.1:7676).
+
+          moviebox-server.exe  - the GUI backend (browse, search, AI, stream)
+          moviebox-tui.exe     - the classic terminal edition
+
+          Playback runs through a local proxy — no extra tools needed.
+          '@ | Out-File -Encoding ascii "$stage\README.txt"
+          Compress-Archive -Path stage/MovieBox_Win10-11_x64 -DestinationPath MovieBox_Win10-11_x64.zip
+
+      - name: Stage legacy package (Win7/8.1)
+        if: matrix.legacy == true
+        shell: pwsh
+        run: |
+          $t = "${{ matrix.target }}"
+          $suffix = "x64"
+          if ($t -like "i686*") { $suffix = "x86" }
+          $stage = "stage/MovieBox_Win7-8.1_$suffix"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "target/$t/release/moviebox-tui.exe" $stage/
+          Copy-Item "target/$t/release/moviebox-server.exe" $stage/
+          Copy-Item README.md $stage/
+          Copy-Item LICENSE-MIT, LICENSE-APACHE $stage/
+          @'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          start "" http://127.0.0.1:7676/
+          moviebox-server.exe --port 7676
+          if errorlevel 1 (
+            echo.
+            echo MovieBox GUI exited with an error. Press any key to close.
+            pause >nul
+          )
+          endlocal
+          '@ | Out-File -Encoding ascii "$stage\Start MovieBox GUI.bat"
+          @'
+          MovieBox  -  Windows 7 SP1 / 8.1 edition (GUI + TUI)
+          =====================================================
+          GUI (recommended):
+            Double-click "Start MovieBox GUI.bat".
+            It starts the local server and opens your browser at
+            http://127.0.0.1:7676
+
+          Browser notes for Windows 7/8.1:
+            - Use a Chromium-based browser that still supports your OS
+              (e.g. Supermium, Thorium, or 360 Extreme Explorer).
+            - Firefox ESR 115 also works.
+
+          TUI (classic terminal edition):
+            moviebox-tui.exe  - same playback features in the console.
+
+          Both editions look for mpv / VLC in a "tools" folder next to the
+          exe first. The GUI server streams through its own built-in proxy,
+          so the tools folder is only needed for the TUI.
+
+          NOTES
+            - This build is made for Windows 7 SP1 and 8.1 (64/32-bit).
+            - Auto-update is disabled. Download new versions manually.
+          '@ | Out-File -Encoding ascii "$stage\README.txt"
+          Compress-Archive -Path $stage -DestinationPath "MovieBox_Win7-8.1_$suffix.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.job-name }}
+          path: "*.zip"
+          if-no-files-found: error

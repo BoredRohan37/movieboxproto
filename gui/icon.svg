@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MovieBox">
+  <defs>
+    <linearGradient id="mb-bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#0d112b"/>
+      <stop offset="0.55" stop-color="#181e4a"/>
+      <stop offset="1" stop-color="#2d1b58"/>
+    </linearGradient>
+    <linearGradient id="mb-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd166"/>
+      <stop offset="1" stop-color="#e8912d"/>
+    </linearGradient>
+    <radialGradient id="mb-glow" cx="0.28" cy="0.18" r="0.75">
+      <stop offset="0" stop-color="#788cff" stop-opacity="0.28"/>
+      <stop offset="0.55" stop-color="#788cff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#788cff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="mb-shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="mb-clip">
+      <rect x="20" y="20" width="472" height="472" rx="112"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#mb-clip)">
+    <rect x="20" y="20" width="472" height="472" fill="url(#mb-bg)"/>
+    <rect x="20" y="20" width="472" height="472" fill="url(#mb-glow)"/>
+  </g>
+
+  <!-- M monogram -->
+  <path d="M142 372 V166 L256 295 L370 166 V372"
+        fill="none" stroke="#f4f6fb" stroke-width="52"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- gold play beam -->
+  <g filter="url(#mb-shadow)">
+    <path d="M215 212 L215 322 L315 267 Z" fill="url(#mb-gold)"/>
+  </g>
+  <path d="M195 201 A 66 66 0 0 1 195 333" fill="none"
+        stroke="#ffd166" stroke-opacity="0.55" stroke-width="9" stroke-linecap="round"/>
+</svg>
