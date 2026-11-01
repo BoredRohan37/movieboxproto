@@ -27,7 +27,7 @@ jobs:
             arch: x86_64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust target
         uses: dtolnay/rust-toolchain@stable
@@ -73,7 +73,7 @@ jobs:
           (cd stage && zip -r "../MovieBox_Android_${{ matrix.arch }}.zip" "$(basename $stage)")
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-${{ matrix.arch }}
           path: "*.zip"
